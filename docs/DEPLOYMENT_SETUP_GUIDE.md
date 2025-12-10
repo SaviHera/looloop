@@ -83,9 +83,22 @@ For each project:
 
 > **Cost Note**: The Blaze plan includes a generous free tier. Small projects typically incur minimal or no charges.
 
-### Step 3: APIs & Services (Automatic - No Action Required)
+### Step 3: Enable Cloud Billing API (Required)
 
-> ✅ **Good news!** Firebase Hosting, Cloud Functions, and all required Google Cloud APIs are **enabled automatically** when you first deploy via GitHub Actions.
+> ⚠️ **Manual Step Required**: The Cloud Billing API must be enabled manually for each project before the first deployment.
+
+For **each** Firebase project (dev, preprod, prod):
+
+1. Go to [Cloud Billing API](https://console.cloud.google.com/apis/library/cloudbilling.googleapis.com)
+2. Select the Firebase project from the dropdown (top of page)
+3. Click **"Enable"**
+4. Repeat for all three projects
+
+> **Why?** Firebase CLI needs this API to verify your project's billing status before deploying Cloud Functions.
+
+### Step 4: Other APIs (Automatic - No Action Required)
+
+> ✅ **Good news!** Most other APIs are **enabled automatically** when you first deploy via GitHub Actions.
 
 When the deployment runs, Firebase CLI automatically enables:
 - Cloud Functions API
@@ -100,7 +113,7 @@ You'll see messages like this in the deployment logs:
 ⚠  artifactregistry: missing required API artifactregistry.googleapis.com. Enabling now...
 ```
 
-**No manual action required** - proceed to Service Account Creation.
+**No manual action required for these** - proceed to Service Account Creation.
 
 > **Troubleshooting**: If APIs fail to enable automatically, see [Troubleshooting](#troubleshooting) section for manual steps.
 
@@ -567,9 +580,9 @@ firebase deploy --only hosting --project your-app-dev --dry-run
 - Verify all roles are assigned (see [Service Account Creation](#step-2-assign-roles))
 - Regenerate the JSON key and update GitHub secret
 
-#### 2. "API not enabled"
+#### 2. "Cloud Billing API has not been used" or "API not enabled"
 
-**Cause**: Required Google Cloud APIs failed to enable automatically (rare).
+**Cause**: Required Google Cloud APIs are not enabled.
 
 **Solution** - Manually enable APIs:
 
@@ -577,12 +590,20 @@ firebase deploy --only hosting --project your-app-dev --dry-run
 2. Select your Firebase project from the dropdown
 3. Navigate to **APIs & Services** → **Library**
 4. Search for and enable each API:
-   - **Cloud Functions API** - [Direct Link](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com)
-   - **Cloud Build API** - [Direct Link](https://console.cloud.google.com/apis/library/cloudbuild.googleapis.com)
-   - **Artifact Registry API** - [Direct Link](https://console.cloud.google.com/apis/library/artifactregistry.googleapis.com)
-   - **Firebase Hosting API** - [Direct Link](https://console.cloud.google.com/apis/library/firebasehosting.googleapis.com)
-5. Click **"Enable"** for each API
-6. Re-run the GitHub Actions deployment
+
+| API | Direct Link | Required |
+|-----|-------------|----------|
+| **Cloud Billing API** | [Enable](https://console.cloud.google.com/apis/library/cloudbilling.googleapis.com) | ⚠️ **Must enable manually** |
+| Cloud Functions API | [Enable](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) | Auto-enabled |
+| Cloud Build API | [Enable](https://console.cloud.google.com/apis/library/cloudbuild.googleapis.com) | Auto-enabled |
+| Artifact Registry API | [Enable](https://console.cloud.google.com/apis/library/artifactregistry.googleapis.com) | Auto-enabled |
+| Firebase Hosting API | [Enable](https://console.cloud.google.com/apis/library/firebasehosting.googleapis.com) | Auto-enabled |
+
+5. Click **"Enable"** for each API (especially Cloud Billing API)
+6. **Wait 2-3 minutes** for changes to propagate
+7. Re-run the GitHub Actions deployment
+
+> **Note**: Enable the Cloud Billing API for **all three projects** (dev, preprod, prod) before first deployment.
 
 #### 3. "Failed to find location of Firebase Functions SDK"
 
@@ -652,6 +673,17 @@ firebase deploy --only hosting --project your-app-dev
 | Firebase Console | https://console.firebase.google.com/ |
 | Google Cloud Console | https://console.cloud.google.com/ |
 | GitHub Actions | https://github.com/{org}/{repo}/actions |
+| Cloud Billing API | https://console.cloud.google.com/apis/library/cloudbilling.googleapis.com |
+
+### Required Manual Setup (Per Project)
+
+| Step | Required For |
+|------|--------------|
+| Create Firebase project | All environments |
+| Enable Blaze billing | Cloud Functions |
+| Enable Cloud Billing API | Deployment verification |
+| Create service account | GitHub Actions auth |
+| Add JSON key to GitHub secrets | CI/CD pipeline |
 
 ### Secret Names
 
