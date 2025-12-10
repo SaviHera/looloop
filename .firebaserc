@@ -1,0 +1,11 @@
+{
+  "projects": {
+    "dev": "looloop-dev",
+    "preprod": "looloop-preprod",
+    "prod": "looloop-prod",
+    "default": "looloop-dev"
+  },
+  "targets": {},
+  "etags": {}
+}
+

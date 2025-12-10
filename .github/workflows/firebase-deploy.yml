@@ -1,0 +1,190 @@
+name: Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - developer
+      - preprod
+      - main
+  pull_request:
+    branches:
+      - developer
+      - preprod
+      - main
+
+env:
+  # ============================================
+  # FIREBASE PROJECT IDs
+  # ============================================
+  FIREBASE_PROJECT_DEV: looloop-dev
+  FIREBASE_PROJECT_PREPROD: looloop-preprod
+  FIREBASE_PROJECT_PROD: looloop-prod
+
+jobs:
+  # ============================================
+  # BUILD JOB
+  # ============================================
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
+
+      - name: Build functions
+        run: cd functions && npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            dist/
+            functions/
+
+  # ============================================
+  # DEVELOPMENT DEPLOYMENT
+  # ============================================
+  deploy-dev:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/developer'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
+
+      - name: Deploy to DEV
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_DEV }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SA_DEV }}
+
+  # ============================================
+  # PRE-PRODUCTION DEPLOYMENT
+  # ============================================
+  deploy-preprod:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/preprod'
+    runs-on: ubuntu-latest
+    environment: preprod
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
+
+      - name: Deploy to PREPROD
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PREPROD }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PREPROD }}
+
+  # ============================================
+  # PRODUCTION DEPLOYMENT
+  # ============================================
+  deploy-prod:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
+
+      - name: Deploy to PRODUCTION
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PROD }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PROD }}
+
+  # ============================================
+  # PR PREVIEW (Deploys to DEV project)
+  # ============================================
+  deploy-preview:
+    needs: build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
+
+      - name: Deploy PR Preview
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SA_DEV }}'
+          projectId: ${{ env.FIREBASE_PROJECT_DEV }}
+          expires: 7d
+          channelId: pr-${{ github.event.pull_request.number }}
+

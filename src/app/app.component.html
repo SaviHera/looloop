@@ -5,11 +5,46 @@
   </header>
 
   <main class="content">
+    <!-- User Card -->
+    <div class="card user-card">
+      <h2>🎲 Random User Generator</h2>
+      <p>Click the button to fetch a random user from the Firebase backend API.</p>
+      
+      <button 
+        class="btn btn-primary fetch-btn" 
+        (click)="fetchRandomUser()" 
+        [disabled]="loading()">
+        @if (loading()) {
+          <span class="spinner"></span> Loading...
+        } @else {
+          Fetch Random User
+        }
+      </button>
+
+      @if (error()) {
+        <div class="error-message">
+          ⚠️ {{ error() }}
+        </div>
+      }
+
+      @if (user()) {
+        <div class="user-display">
+          <div class="user-avatar">{{ user()!.avatar }}</div>
+          <div class="user-info">
+            <h3>{{ user()!.name }}</h3>
+            <p class="user-role">{{ user()!.role }}</p>
+            <p class="user-email">{{ user()!.email }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Get Started Card -->
     <div class="card">
       <h2>Get Started</h2>
       <p>Edit <code>src/app/app.component.html</code> to customize this page.</p>
       <div class="actions">
-        <a href="https://angular.dev" target="_blank" class="btn btn-primary">
+        <a href="https://angular.dev" target="_blank" class="btn btn-secondary">
           Angular Docs
         </a>
         <a href="https://angular.dev/tutorials" target="_blank" class="btn btn-secondary">
@@ -21,4 +56,3 @@
 
   <router-outlet />
 </div>
-
