@@ -67,10 +67,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
 
       - name: Deploy to DEV
         uses: w9jds/firebase-action@master
@@ -91,10 +99,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
 
       - name: Deploy to PREPROD
         uses: w9jds/firebase-action@master
@@ -115,10 +131,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
 
       - name: Deploy to PRODUCTION
         uses: w9jds/firebase-action@master
@@ -142,10 +166,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-output
+
+      - name: Install functions dependencies
+        run: cd functions && npm install
 
       - name: Deploy PR Preview
         uses: FirebaseExtended/action-hosting-deploy@v0
