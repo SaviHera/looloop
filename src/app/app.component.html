@@ -1,39 +1,119 @@
 <div class="app-container">
   <header class="hero">
     <h1 class="title">🚀 {{ title }}</h1>
-    <p class="subtitle">Welcome to your Angular application!</p>
+    <p class="subtitle">Welcome to your Angular application with Firestore!</p>
   </header>
 
   <main class="content">
-    <!-- User Card -->
+    <!-- Firestore Users Card -->
+    <div class="card firestore-card">
+      <h2>🔥 Firestore Users</h2>
+      <p>Real-time data from Firebase Firestore database.</p>
+
+      <div class="firestore-actions">
+        <button class="btn btn-secondary" (click)="seedData()" [disabled]="firestoreLoading()">
+          🌱 Seed Sample Data
+        </button>
+      </div>
+
+      @if (firestoreError()) {
+        <div class="error-message">
+          ⚠️ {{ firestoreError() }}
+        </div>
+      }
+
+      @if (firestoreLoading() && users().length === 0) {
+        <div class="loading-message">
+          <span class="spinner"></span> Loading users...
+        </div>
+      }
+
+      <!-- Add User Form -->
+      <div class="add-user-form">
+        <h3>➕ Add New User</h3>
+        <div class="form-row">
+          <input 
+            type="text" 
+            placeholder="Name" 
+            [value]="newUser().name"
+            (input)="updateNewUser('name', $any($event.target).value)"
+            class="form-input">
+          <input 
+            type="email" 
+            placeholder="Email" 
+            [value]="newUser().email"
+            (input)="updateNewUser('email', $any($event.target).value)"
+            class="form-input">
+          <input 
+            type="text" 
+            placeholder="Role" 
+            [value]="newUser().role"
+            (input)="updateNewUser('role', $any($event.target).value)"
+            class="form-input">
+          <select 
+            [value]="newUser().avatar"
+            (change)="updateNewUser('avatar', $any($event.target).value)"
+            class="form-input avatar-select">
+            @for (avatar of avatars; track avatar) {
+              <option [value]="avatar">{{ avatar }}</option>
+            }
+          </select>
+          <button class="btn btn-primary" (click)="addUser()" [disabled]="firestoreLoading()">
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Users List -->
+      <div class="users-list">
+        @if (users().length === 0 && !firestoreLoading()) {
+          <p class="no-users">No users found. Click "Seed Sample Data" to add some!</p>
+        }
+        @for (user of users(); track user.id) {
+          <div class="user-item">
+            <div class="user-avatar">{{ user.avatar }}</div>
+            <div class="user-info">
+              <h4>{{ user.name }}</h4>
+              <p class="user-role">{{ user.role }}</p>
+              <p class="user-email">{{ user.email }}</p>
+            </div>
+            <button class="btn btn-danger btn-small" (click)="deleteUser(user.id!)">
+              🗑️
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- API User Card (existing) -->
     <div class="card user-card">
-      <h2>🎲 Random User Generator</h2>
-      <p>Click the button to fetch a random user from the Firebase backend API.</p>
+      <h2>🎲 Random User from API</h2>
+      <p>Fetch a random user from the Firebase Cloud Functions backend.</p>
       
       <button 
         class="btn btn-primary fetch-btn" 
         (click)="fetchRandomUser()" 
-        [disabled]="loading()">
-        @if (loading()) {
+        [disabled]="apiLoading()">
+        @if (apiLoading()) {
           <span class="spinner"></span> Loading...
         } @else {
           Fetch Random User
         }
       </button>
 
-      @if (error()) {
+      @if (apiError()) {
         <div class="error-message">
-          ⚠️ {{ error() }}
+          ⚠️ {{ apiError() }}
         </div>
       }
 
-      @if (user()) {
+      @if (apiUser()) {
         <div class="user-display">
-          <div class="user-avatar">{{ user()!.avatar }}</div>
+          <div class="user-avatar">{{ apiUser()!.avatar }}</div>
           <div class="user-info">
-            <h3>{{ user()!.name }}</h3>
-            <p class="user-role">{{ user()!.role }}</p>
-            <p class="user-email">{{ user()!.email }}</p>
+            <h3>{{ apiUser()!.name }}</h3>
+            <p class="user-role">{{ apiUser()!.role }}</p>
+            <p class="user-email">{{ apiUser()!.email }}</p>
           </div>
         </div>
       }
@@ -47,8 +127,8 @@
         <a href="https://angular.dev" target="_blank" class="btn btn-secondary">
           Angular Docs
         </a>
-        <a href="https://angular.dev/tutorials" target="_blank" class="btn btn-secondary">
-          Tutorials
+        <a href="https://firebase.google.com/docs/firestore" target="_blank" class="btn btn-secondary">
+          Firestore Docs
         </a>
       </div>
     </div>
