@@ -1,12 +1,10 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin
 initializeApp();
-const db = getFirestore();
 
-// Sample user data (fallback if Firestore is empty)
+// Sample user data
 const sampleUsers = [
   { id: 1, name: "Alice Johnson", email: "alice@example.com", role: "Developer", avatar: "👩‍💻" },
   { id: 2, name: "Bob Smith", email: "bob@example.com", role: "Designer", avatar: "👨‍🎨" },
@@ -19,8 +17,8 @@ const sampleUsers = [
 ];
 
 /**
- * API endpoint with Firestore integration
- * Access via: /api, /api/random-user, /api/users, /api/add-user
+ * API endpoint
+ * Access via: /api, /api/random-user
  */
 export const api = onRequest(async (request, response) => {
   // Enable CORS
@@ -36,52 +34,14 @@ export const api = onRequest(async (request, response) => {
   const path = request.path;
 
   try {
-    // Get all users from Firestore
-    if (path === "/users" || path === "/api/users") {
-      const snapshot = await db.collection("users").orderBy("createdAt", "desc").get();
-      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      response.json({ success: true, users, count: users.length });
-      return;
-    }
-
-    // Add a user to Firestore
-    if ((path === "/add-user" || path === "/api/add-user") && request.method === "POST") {
-      const { name, email, role, avatar } = request.body;
-      
-      if (!name || !email || !role) {
-        response.status(400).json({ success: false, error: "Missing required fields" });
-        return;
-      }
-
-      const docRef = await db.collection("users").add({
-        name,
-        email,
-        role,
-        avatar: avatar || "👤",
-        createdAt: new Date()
-      });
-      
-      response.json({ success: true, id: docRef.id, message: "User added successfully" });
-      return;
-    }
-
-    // Random user from Firestore (or fallback to sample data)
+    // Random user from sample data
     if (path === "/random-user" || path === "/api/random-user") {
-      const snapshot = await db.collection("users").get();
-      
-      let randomUser;
-      if (snapshot.empty) {
-        // Fallback to sample data if Firestore is empty
-        randomUser = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
-      } else {
-        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        randomUser = users[Math.floor(Math.random() * users.length)];
-      }
+      const randomUser = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
       
       response.json({
         success: true,
         user: randomUser,
-        source: snapshot.empty ? "sample" : "firestore",
+        source: "sample",
         timestamp: new Date().toISOString()
       });
       return;
@@ -93,8 +53,7 @@ export const api = onRequest(async (request, response) => {
       message: `Hello, ${name}!`,
       timestamp: new Date().toISOString(),
       method: request.method,
-      path: request.path,
-      firestore: "connected"
+      path: request.path
     });
   } catch (error) {
     console.error("API Error:", error);
