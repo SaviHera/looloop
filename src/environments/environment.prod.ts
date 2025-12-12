@@ -1,14 +1,14 @@
 // Production environment configuration
-// TODO: Update with your Firebase config from Firebase Console
 export const environment = {
   production: true,
   firebase: {
-    apiKey: "YOUR_PROD_API_KEY",
+    apiKey: "AIzaSyCq4Xn7mO1d9zQbjmMoIe81Yr3NnVxUc8c",
     authDomain: "looloop-prod.firebaseapp.com",
     projectId: "looloop-prod",
     storageBucket: "looloop-prod.firebasestorage.app",
-    messagingSenderId: "YOUR_PROD_SENDER_ID",
-    appId: "YOUR_PROD_APP_ID"
+    messagingSenderId: "421274787434",
+    appId: "1:421274787434:web:e2ceaa56bb5add5b4ab413",
+    measurementId: "G-PVK9NKDV08"
   }
 };
 
