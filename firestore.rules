@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Test data collection - allow read/write for testing (CI/CD pipeline testing)
+    match /testData/{documentId} {
+      allow read, write: if true;
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+
