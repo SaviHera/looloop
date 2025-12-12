@@ -10,6 +10,8 @@ import {
   limit
 } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { Timestamp } from 'firebase/firestore';
 
 export interface TestData {
   id?: string;
@@ -47,11 +49,32 @@ export class FirestoreService {
     try {
       const testDataRef = collection(this.firestore, this.collectionName);
       const q = query(testDataRef, orderBy('timestamp', 'desc'), limit(10));
-      return collectionData(q, { idField: 'id' }) as Observable<TestData[]>;
+      return collectionData(q, { idField: 'id' }).pipe(
+        map((data: any[]) => 
+          data.map(item => ({
+            ...item,
+            timestamp: this.convertTimestamp(item.timestamp)
+          }))
+        )
+      ) as Observable<TestData[]>;
     } catch (error) {
       console.error('❌ Error getting data:', error);
       throw error;
     }
+  }
+
+  // Convert Firestore Timestamp to JavaScript Date
+  private convertTimestamp(timestamp: any): Date {
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    if (timestamp && timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000);
+    }
+    return new Date(timestamp || Date.now());
   }
 
   // Get data count (for testing)
