@@ -5,6 +5,77 @@
   </header>
 
   <main class="content">
+    <!-- Firestore Test Card -->
+    <div class="card firestore-card">
+      <h2>🔥 Firestore Database Test</h2>
+      <p>Test saving and retrieving data from Firebase Firestore for CI/CD pipeline testing.</p>
+
+      @if (firestoreError()) {
+        <div class="error-message">
+          ⚠️ {{ firestoreError() }}
+        </div>
+      }
+
+      <!-- Save Data Form -->
+      <div class="save-form">
+        <h3>💾 Save Data</h3>
+        <div class="form-row">
+          <input 
+            type="text" 
+            placeholder="Enter a message" 
+            [value]="newMessage()"
+            (input)="newMessage.set($any($event.target).value)"
+            class="form-input"
+            [disabled]="firestoreLoading()">
+          <input 
+            type="number" 
+            placeholder="Value" 
+            [value]="newValue()"
+            (input)="newValue.set(+$any($event.target).value)"
+            class="form-input form-input-number"
+            [disabled]="firestoreLoading()">
+          <button 
+            class="btn btn-primary" 
+            (click)="saveData()" 
+            [disabled]="firestoreLoading() || !newMessage().trim()">
+            @if (firestoreLoading()) {
+              <span class="spinner"></span> Saving...
+            } @else {
+              Save
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- Data List -->
+      <div class="data-section">
+        <h3>📊 Stored Data ({{ dataCount() }} items)</h3>
+        @if (firestoreLoading() && testData().length === 0) {
+          <div class="loading-message">
+            <span class="spinner"></span> Loading data...
+          </div>
+        }
+        @if (testData().length === 0 && !firestoreLoading()) {
+          <p class="no-data">No data yet. Save some data to get started!</p>
+        }
+        @if (testData().length > 0) {
+          <div class="data-list">
+            @for (item of testData(); track item.id) {
+              <div class="data-item">
+                <div class="data-content">
+                  <p class="data-message">{{ item.message }}</p>
+                  <div class="data-meta">
+                    <span class="data-value">Value: {{ item.value }}</span>
+                    <span class="data-time">{{ item.timestamp | date:'short' }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
     <!-- API User Card -->
     <div class="card user-card">
       <h2>🎲 Random User from API</h2>
