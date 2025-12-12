@@ -54,6 +54,8 @@ jobs:
           path: |
             dist/
             functions/
+            firestore.rules
+            firestore.indexes.json
 
   # ============================================
   # DEVELOPMENT DEPLOYMENT
@@ -83,7 +85,7 @@ jobs:
       - name: Deploy to DEV
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_DEV }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_DEV }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_DEV }}
 
@@ -115,7 +117,7 @@ jobs:
       - name: Deploy to PREPROD
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PREPROD }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_PREPROD }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PREPROD }}
 
@@ -147,7 +149,7 @@ jobs:
       - name: Deploy to PRODUCTION
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PROD }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_PROD }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PROD }}
 
