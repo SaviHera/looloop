@@ -9,14 +9,15 @@ This guide provides step-by-step instructions for setting up a complete CI/CD pi
 1. [Architecture Overview](#architecture-overview)
 2. [Prerequisites](#prerequisites)
 3. [Firebase Project Setup](#firebase-project-setup)
-4. [Service Account Creation](#service-account-creation)
-5. [GitHub Repository Setup](#github-repository-setup)
-6. [GitHub Secrets Configuration](#github-secrets-configuration)
-7. [GitHub Environments Setup](#github-environments-setup)
-8. [Deployment Workflow](#deployment-workflow)
-9. [Branch Strategy](#branch-strategy)
-10. [Verification & Testing](#verification--testing)
-11. [Troubleshooting](#troubleshooting)
+4. [Firestore Database Setup](#firestore-database-setup)
+5. [Service Account Creation](#service-account-creation)
+6. [GitHub Repository Setup](#github-repository-setup)
+7. [GitHub Secrets Configuration](#github-secrets-configuration)
+8. [GitHub Environments Setup](#github-environments-setup)
+9. [Deployment Workflow](#deployment-workflow)
+10. [Branch Strategy](#branch-strategy)
+11. [Verification & Testing](#verification--testing)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -105,6 +106,7 @@ When the deployment runs, Firebase CLI automatically enables:
 - Cloud Build API
 - Artifact Registry API
 - Firebase Hosting API
+- Firestore API
 
 You'll see messages like this in the deployment logs:
 ```
@@ -113,9 +115,72 @@ You'll see messages like this in the deployment logs:
 ⚠  artifactregistry: missing required API artifactregistry.googleapis.com. Enabling now...
 ```
 
-**No manual action required for these** - proceed to Service Account Creation.
+**No manual action required for these** - proceed to Firestore Database Setup.
 
 > **Troubleshooting**: If APIs fail to enable automatically, see [Troubleshooting](#troubleshooting) section for manual steps.
+
+---
+
+## Firestore Database Setup
+
+### Step 1: Create Firestore Database
+
+For **each** Firebase project that needs database functionality:
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select the Firebase project (e.g., `{appname}-dev`)
+3. Navigate to **Build** → **Firestore Database**
+4. Click **"Create database"**
+5. Choose database mode:
+   - **Production mode** (recommended) - Requires security rules
+   - **Test mode** - Allows all reads/writes (for initial testing only)
+6. Select a location:
+   - Recommended: `us-central1` (same for all environments)
+   - **Important**: Location cannot be changed after creation
+7. Click **"Enable"**
+8. Wait for database initialization (usually 1-2 minutes)
+
+> **Note**: You can create databases for all environments at once, or create them as needed. Start with the dev environment for testing.
+
+### Step 2: Verify Firestore Files in Repository
+
+Ensure the following files exist in your repository:
+
+- `firestore.rules` - Security rules for Firestore
+- `firestore.indexes.json` - Database indexes configuration
+- `firebase.json` - Must include Firestore configuration:
+
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
+```
+
+### Step 3: Firestore Rules Deployment
+
+Firestore rules are automatically deployed via GitHub Actions when you push to branches. The workflow includes `firestore` in the deploy command:
+
+```yaml
+args: deploy --only hosting,functions,firestore --force
+```
+
+**Manual deployment** (if needed):
+```bash
+firebase deploy --only firestore:rules --project {project-id}
+```
+
+### Step 4: Verify Rules in Firebase Console
+
+After deployment, verify rules are active:
+
+1. Go to Firebase Console → Firestore Database → **Rules** tab
+2. You should see your custom rules (not the default deny-all rules)
+3. Rules should allow access to your collections as configured
+
+> **Security Note**: For production, ensure rules are properly secured. Test mode allows all access and should only be used for development.
 
 ---
 
@@ -143,11 +208,12 @@ Add the following roles to the service account:
 
 | Role | Purpose |
 |------|---------|
-| `Firebase Admin` | Full Firebase access |
+| `Firebase Admin` | Full Firebase access (includes Firestore) |
 | `Cloud Functions Admin` | Deploy Cloud Functions |
 | `Service Account User` | Run as service account |
 | `Cloud Build Editor` | Build container images |
 | `Artifact Registry Admin` | Store container images |
+| `Cloud Datastore User` | Firestore database access (if needed) |
 
 To add roles:
 1. Click **"+ ADD ANOTHER ROLE"** for each role
@@ -360,6 +426,8 @@ jobs:
           path: |
             dist/
             functions/lib/
+            firestore.rules
+            firestore.indexes.json
           retention-days: 1
 
   # ============================================
@@ -390,7 +458,7 @@ jobs:
       - name: Deploy to DEV
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_DEV }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_DEV }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_DEV }}
 
@@ -422,7 +490,7 @@ jobs:
       - name: Deploy to PREPROD
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PREPROD }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_PREPROD }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PREPROD }}
 
@@ -454,7 +522,7 @@ jobs:
       - name: Deploy to PRODUCTION
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only hosting,functions --force --project ${{ env.FIREBASE_PROJECT_PROD }}
+          args: deploy --only hosting,functions,firestore --force --project ${{ env.FIREBASE_PROJECT_PROD }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SA_PROD }}
 
@@ -566,6 +634,14 @@ firebase deploy --only hosting --project your-app-dev --dry-run
 | Pre-Production | `https://{app}-preprod.web.app` | ✅ |
 | Production | `https://{app}-prod.web.app` | ✅ |
 
+### Step 4: Verify Firestore Database
+
+1. Go to Firebase Console → Firestore Database → **Data** tab
+2. Verify you can see collections (if any data exists)
+3. Go to **Rules** tab and verify custom rules are deployed
+4. Test saving data from your application
+5. Verify data appears in Firestore Console in real-time
+
 ---
 
 ## Troubleshooting
@@ -636,6 +712,45 @@ firebase deploy --only hosting --project your-app-dev --dry-run
 
 **Solution**: Verify `FIREBASE_PROJECT_*` values in workflow match actual Firebase project IDs.
 
+#### 7. "Missing or insufficient permissions" (Firestore)
+
+**Cause**: Firestore rules not deployed or database not created.
+
+**Solution**:
+1. Verify Firestore database is created in Firebase Console
+2. Check that `firestore.rules` file exists in repository root
+3. Verify workflow includes `firestore` in deploy command: `--only hosting,functions,firestore`
+4. Check Firestore rules in Firebase Console → Firestore Database → Rules tab
+5. If rules are default (deny all), deploy rules manually:
+   ```bash
+   firebase deploy --only firestore:rules --project {project-id}
+   ```
+
+#### 8. "400 Bad Request" when connecting to Firestore
+
+**Cause**: Wrong Firebase project configuration or database not created.
+
+**Solution**:
+1. Verify `environment.ts` points to correct project (dev/preprod/prod)
+2. Check `angular.json` defaultConfiguration is set to `development` for local dev
+3. Ensure Firestore database exists in the target Firebase project
+4. Verify database location matches (e.g., `us-central1`)
+5. Clear browser cache and restart dev server
+
+#### 9. "NG02100" Angular Date Pipe Error
+
+**Cause**: Firestore returns Timestamp objects, not JavaScript Date objects.
+
+**Solution**: Ensure Firestore service converts Timestamps to Dates:
+```typescript
+// In Firestore service
+private convertTimestamp(timestamp: any): Date {
+  if (timestamp instanceof Date) return timestamp;
+  if (timestamp?.toDate) return timestamp.toDate();
+  return new Date(timestamp || Date.now());
+}
+```
+
 ### Debug Commands
 
 ```bash
@@ -682,8 +797,10 @@ firebase deploy --only hosting --project your-app-dev
 | Create Firebase project | All environments |
 | Enable Blaze billing | Cloud Functions |
 | Enable Cloud Billing API | Deployment verification |
+| Create Firestore database | Database functionality |
 | Create service account | GitHub Actions auth |
 | Add JSON key to GitHub secrets | CI/CD pipeline |
+| Deploy Firestore rules | Database access (auto via CI/CD) |
 
 ### Secret Names
 
@@ -709,6 +826,45 @@ For issues related to:
 - **Firebase**: [Firebase Support](https://firebase.google.com/support)
 - **GitHub Actions**: [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - **Google Cloud IAM**: [IAM Documentation](https://cloud.google.com/iam/docs)
+
+---
+
+---
+
+## Firestore Quick Reference
+
+### Database Creation Checklist
+
+- [ ] Create Firestore database in dev project
+- [ ] Create Firestore database in preprod project (when ready)
+- [ ] Create Firestore database in prod project (when ready)
+- [ ] Use same location (e.g., `us-central1`) for all environments
+- [ ] Choose Production mode (not Test mode) for security
+
+### Files Required
+
+- [ ] `firestore.rules` - Security rules file
+- [ ] `firestore.indexes.json` - Indexes configuration
+- [ ] `firebase.json` - Includes Firestore configuration
+
+### Deployment Verification
+
+After pushing to a branch, verify:
+- [ ] GitHub Actions workflow completes successfully
+- [ ] Firestore rules are deployed (check Firebase Console → Rules tab)
+- [ ] Application can save/read data from Firestore
+- [ ] No permission errors in browser console
+
+### Common Firestore Locations
+
+| Location | Region | Use Case |
+|----------|--------|----------|
+| `us-central1` | Iowa, USA | Default, good for most apps |
+| `us-east1` | South Carolina, USA | East Coast US |
+| `europe-west1` | Belgium | Europe |
+| `asia-southeast1` | Singapore | Asia Pacific |
+
+> **Note**: Choose the location closest to your users. Location cannot be changed after creation.
 
 ---
 
